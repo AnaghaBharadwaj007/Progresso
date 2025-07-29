@@ -1,58 +1,138 @@
-import { useState } from "react";
+import { useEffect, useState } from "react"; // Import useEffect
 import {
   FaBookOpen,
   FaCode,
   FaSave,
   FaSignOutAlt,
+  FaSpinner,
   FaTerminal,
   FaTrash,
   FaUser,
-} from "react-icons/fa"; // Added FaCode, FaBookOpen, FaTerminal
+} from "react-icons/fa";
+import { useAuth } from "../AuthContext.jsx";
+import supabase from "../supabaseClient";
 
-export default function Profile({ onLogout }) {
-  // State for user details, initialized with empty strings or default placeholders
+export default function Profile() {
+  // onLogout prop will be called by handleLogout directly
+  const { user, loading: authLoading } = useAuth(); // Get user and loading state from AuthContext
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [leetcodeUrl, setLeetcodeUrl] = useState("");
-  const [geeksforgeeksUrl, setGeeksforGeeksUrl] = useState(""); // Corrected typo here
+  const [geeksforgeeksUrl, setGeeksforGeeksUrl] = useState("");
   const [hackerrankUrl, setHackerrankUrl] = useState("");
-  const [message, setMessage] = useState(""); // For success/error messages
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false); // For saving/fetching operations specific to this component
+  const [fetchError, setFetchError] = useState(null); // For errors during initial fetch
 
-  const handleSaveChanges = (e) => {
+  // Effect to fetch user data and populate form fields on component mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      setLoading(true);
+      setFetchError(null);
+
+      if (authLoading) {
+        // Wait for auth state to be loaded
+        return;
+      }
+
+      if (user) {
+        // User's email is directly on the user object
+        setEmail(user.email || "");
+
+        // Custom data (name, URLs) are in user_metadata
+        setName(user.user_metadata?.name || "");
+        setLeetcodeUrl(user.user_metadata?.leetcode_url || "");
+        setGeeksforGeeksUrl(user.user_metadata?.geeksforgeeks_url || "");
+        setHackerrankUrl(user.user_metadata?.hackerrank_url || "");
+      } else {
+        // If no user is logged in, clear fields and show error (ProtectedRoute should handle redirect)
+        setName("");
+        setEmail("");
+        setLeetcodeUrl("");
+        setGeeksforGeeksUrl("");
+        setHackerrankUrl("");
+        setFetchError("No user logged in. Please sign in.");
+      }
+      setLoading(false);
+    };
+
+    fetchUserProfile();
+  }, [user, authLoading]); // Re-run when user or authLoading state changes
+
+  const handleSaveChanges = async (e) => {
     e.preventDefault();
-    console.log("Saving changes:", {
-      name,
-      email,
-      leetcodeUrl,
-      geeksforgeeksUrl,
-      hackerrankUrl,
-    });
+    setLoading(true);
+    setMessage("");
 
-    // --- Placeholder for actual API call to update user profile ---
-    // In a real application, you would send this data to your backend/database (e.g., Supabase)
-    // You'd typically get the current user ID/info from an authentication context here
-    // const { data, error } = await supabase.from('users').update({
-    //   name: name,
-    //   email: email,
-    //   leetcode_url: leetcodeUrl,
-    //   geeksforgeeks_url: geeksforgeeksUrl,
-    //   hackerrank_url: hackerrankUrl
-    // }).eq('id', currentUserId);
-    // if (error) { ... setError message ... } else { ... set success message ... }
+    if (!user) {
+      setMessage({
+        type: "error",
+        text: "You must be logged in to save changes.",
+      });
+      setLoading(false);
+      return;
+    }
 
-    // Simulate successful save for now
-    setMessage({ type: "success", text: "Profile updated successfully!" });
-    setTimeout(() => setMessage(""), 3000);
+    try {
+      // Update basic user attributes (like email if changed) and user_metadata
+      const { data, error } = await supabase.auth.updateUser({
+        email: email, // Update email if it's been changed in the form
+        data: {
+          // This object goes into user_metadata
+          name: name,
+          leetcode_url: leetcodeUrl,
+          geeksforgeeks_url: geeksforgeeksUrl,
+          hackerrank_url: hackerrankUrl,
+        },
+      });
+
+      if (error) {
+        console.error("Supabase Update Error:", error.message);
+        setMessage({
+          type: "error",
+          text: `Error saving changes: ${error.message}`,
+        });
+      } else {
+        console.log("Profile updated successfully:", data);
+        setMessage({ type: "success", text: "Profile updated successfully!" });
+      }
+    } catch (err) {
+      console.error("Unexpected error during save:", err);
+      setMessage({ type: "error", text: "An unexpected error occurred." });
+    } finally {
+      setLoading(false);
+      setTimeout(() => setMessage(""), 3000); // Clear message after 3 seconds
+    }
   };
 
-  const handleLogout = () => {
-    console.log("Logging out...");
-    // --- Placeholder for actual logout logic ---
-    // e.g., await supabase.auth.signOut();
-    if (onLogout) {
-      onLogout(); // Notify App.jsx to handle logout state change
+  const handleLogout = async () => {
+    setLoading(true);
+    setMessage("");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Supabase Logout Error:", error.message);
+        setMessage({
+          type: "error",
+          text: `Error logging out: ${error.message}`,
+        });
+      } else {
+        console.log("Logged out successfully.");
+        // AuthContext will automatically update user to null,
+        // ProtectedRoute will handle redirection.
+        setMessage({ type: "success", text: "You have been logged out." });
+      }
+    } catch (err) {
+      console.error("Unexpected error during logout:", err);
+      setMessage({
+        type: "error",
+        text: "An unexpected error occurred during logout.",
+      });
+    } finally {
+      setLoading(false);
+      setTimeout(() => setMessage(""), 3000);
     }
-    alert("Logged out! (Simulated)");
   };
 
   const clearUrl = (platform) => {
@@ -62,7 +142,7 @@ export default function Profile({ onLogout }) {
         break;
       case "geeksforgeeks":
         setGeeksforGeeksUrl("");
-        break; // Corrected typo here too
+        break;
       case "hackerrank":
         setHackerrankUrl("");
         break;
@@ -73,10 +153,18 @@ export default function Profile({ onLogout }) {
       type: "info",
       text: `${
         platform.charAt(0).toUpperCase() + platform.slice(1)
-      } URL cleared.`,
+      } URL cleared locally. Remember to save changes.`,
     });
-    setTimeout(() => setMessage(""), 2000);
+    setTimeout(() => setMessage(""), 3000);
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 text-gray-800 flex items-center justify-center text-xl">
+        Loading user profile...
+      </div>
+    );
+  }
 
   return (
     <div className="flex-grow p-8 bg-gray-100 overflow-auto">
@@ -84,6 +172,16 @@ export default function Profile({ onLogout }) {
         <h1 className="text-3xl font-bold text-gray-800 text-center mb-8 flex items-center justify-center gap-3">
           <FaUser className="text-blue-600" /> Your Profile
         </h1>
+
+        {fetchError && (
+          <div
+            className="flex items-center p-3 mb-6 bg-red-50 text-red-700 rounded-md text-base"
+            role="alert"
+          >
+            <FaExclamationTriangle className="mr-2 flex-shrink-0" />
+            <span>{fetchError}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSaveChanges}>
           {/* Personal Information Section */}
@@ -250,18 +348,26 @@ export default function Profile({ onLogout }) {
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline transition duration-300 ease-in-out w-full"
+              disabled={loading || authLoading} // Disable save button during component's loading or auth loading
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline transition duration-300 ease-in-out w-full flex items-center justify-center gap-2"
             >
-              <FaSave className="inline-block mr-2" /> Save Changes
+              {loading ? <FaSpinner className="animate-spin" /> : <FaSave />}{" "}
+              Save Changes
             </button>
           </div>
           <div className="flex justify-center">
             <button
               type="button"
               onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline transition duration-300 ease-in-out w-full max-w-sm"
+              disabled={loading || authLoading} // Disable logout button during component's loading or auth loading
+              className="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline transition duration-300 ease-in-out w-full max-w-sm flex items-center justify-center gap-2"
             >
-              <FaSignOutAlt className="inline-block mr-2" /> Logout
+              {loading ? (
+                <FaSpinner className="animate-spin" />
+              ) : (
+                <FaSignOutAlt />
+              )}{" "}
+              Logout
             </button>
           </div>
         </form>

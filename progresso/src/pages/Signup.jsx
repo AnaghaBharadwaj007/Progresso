@@ -11,6 +11,8 @@ import {
 } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 
+import supabase from "../supabaseClient"; // Make sure this path is correct
+
 export default function SignUp({ onSignUpSuccess }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -59,47 +61,51 @@ export default function SignUp({ onSignUpSuccess }) {
     setLoading(true);
     setError("");
 
-    console.log("Attempting signup with:", {
-      name,
-      email,
-      leetcodeUrl,
-      geeksforgeeksUrl,
-      hackerrankUrl,
+    // --- START Supabase Integration ---
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: {
+        data: {
+          name: name, // Store name in user_metadata
+          leetcode_url: leetcodeUrl, // Store LeetCode URL
+          geeksforgeeks_url: geeksforgeeksUrl, // Store GeeksforGeeks URL
+          hackerrank_url: hackerrankUrl, // Store HackerRank URL
+        },
+      },
     });
+    // --- END Supabase Integration ---
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      console.log("Simulated Sign up successful!");
-
+    if (signUpError) {
+      console.error("Supabase Sign-up Error:", signUpError.message);
+      setError(signUpError.message); // Display error from Supabase
+    } else if (data.user) {
+      console.log("Supabase Sign-up successful! User:", data.user);
+      alert(
+        "Sign-up successful! Please check your email for a verification link."
+      ); // Notify user about email verification
       if (onSignUpSuccess) {
-        onSignUpSuccess();
-      } else {
-        navigate("/signin");
+        onSignUpSuccess(); // Navigate to sign-in page via prop
       }
-    } catch (err) {
+    } else {
+      // This case might happen if no error but also no user (e.g., confirmation email sent, but not immediately logged in)
       setError(
-        "An unexpected error occurred during sign up. Please try again."
+        "Sign-up initiated. Please check your email for a verification link."
       );
-      console.error("Signup error:", err);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-lg w-full bg-white rounded-xl shadow-2xl p-10 space-y-8 animate-fade-in-up">
-        {" "}
         {/* Increased max-w and padding */}
         <div>
           <h2 className="text-center text-4xl sm:text-5xl font-extrabold text-gray-900 mb-2">
-            {" "}
             {/* Increased font size */}
             Join Progresso
           </h2>
           <p className="mt-2 text-center text-lg text-gray-600">
-            {" "}
             {/* Increased font size */}
             Already a member?
             <Link
@@ -125,7 +131,7 @@ export default function SignUp({ onSignUpSuccess }) {
                   type="text"
                   autoComplete="name"
                   required
-                  className="appearance-none rounded-t-md relative block w-full px-4 py-3 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-base"
+                  className="appearance-none rounded-t-md relative block w-full px-4 py-3 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-base"
                   placeholder="Full Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -137,7 +143,7 @@ export default function SignUp({ onSignUpSuccess }) {
                 Email address
               </label>
               <div className="relative">
-                <FaEnvelope className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />{" "}
+                <FaEnvelope className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
                 {/* Increased icon size and padding */}
                 <input
                   id="email"
@@ -145,7 +151,7 @@ export default function SignUp({ onSignUpSuccess }) {
                   type="email"
                   autoComplete="email"
                   required
-                  className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-base"
+                  className="appearance-none relative block w-full px-4 py-3 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-base"
                   placeholder="Email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -157,7 +163,7 @@ export default function SignUp({ onSignUpSuccess }) {
                 Password
               </label>
               <div className="relative">
-                <FaLock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />{" "}
+                <FaLock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
                 {/* Increased icon size and padding */}
                 <input
                   id="password"
@@ -165,7 +171,7 @@ export default function SignUp({ onSignUpSuccess }) {
                   type="password"
                   autoComplete="new-password"
                   required
-                  className="appearance-none rounded-b-md relative block w-full px-4 py-3 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-base"
+                  className="appearance-none rounded-b-md relative block w-full px-4 py-3 pl-12 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-base"
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

@@ -1,4 +1,7 @@
-// FeatureCard Component for the Scroll Reveal Section
+import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useAuth } from "../AuthContext"; // Import useAuth to access login state
+
+// FeatureCard Component for the Scroll Reveal Section (no changes here)
 function FeatureCard({ icon, title, description }) {
   return (
     <div className="bg-white rounded-lg shadow-xl p-6 text-center transform transition duration-300 hover:scale-105 hover:shadow-2xl">
@@ -11,17 +14,28 @@ function FeatureCard({ icon, title, description }) {
 
 // HomePage Component
 export default function Home() {
-  // Placeholder function for "Try Now" button click
+  const { user, loading } = useAuth(); // Consume AuthContext to get user and loading state
+  const navigate = useNavigate(); // Initialize useNavigate hook
+
+  // Updated handleTryNowClick for conditional navigation
   const handleTryNowClick = () => {
-    console.log("Try Now button clicked! (Will lead to login/signup)");
-    // Future: navigate to login/signup page
-    // Example: navigate('/login');
+    if (loading) {
+      // Optionally show a loading indicator or disable button
+      console.log("Authentication status is still loading...");
+      return;
+    }
+    if (user) {
+      // If user is logged in
+      navigate("/dashboard");
+    } else {
+      // If user is not logged in
+      navigate("/signin");
+    }
   };
 
-  // Placeholder function for "Learn More" button click
+  // Placeholder function for "Learn More" button click (no changes)
   const handleLearnMoreClick = () => {
     console.log("Learn More button clicked! (Will scroll to features)");
-    // Future: smooth scroll to the features section
     document
       .getElementById("features-section")
       ?.scrollIntoView({ behavior: "smooth" });
@@ -29,6 +43,11 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 font-sans text-gray-900">
+      {/*
+        Removed Navigation Bar here, as it's now rendered globally in App.jsx.
+        Your App.jsx imports Navbar from "./components/Navbar" and renders it once.
+      */}
+
       {/* Hero Section */}
       <section className="flex-grow flex items-center justify-center p-8 bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-center">
         <div className="max-w-4xl mx-auto">
