@@ -54,7 +54,9 @@ export default function Problems() {
       try {
         // This endpoint now triggers the sync and returns updated problems
         const response = await fetch(
-          `http://localhost:5000/api/user_problems?user_id=${user.id}`
+          `${import.meta.env.VITE_BACKEND_URL}/api/user_problems?user_id=${
+            user.id
+          }`
         );
 
         if (!response.ok) {

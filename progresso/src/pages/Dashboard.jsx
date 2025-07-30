@@ -170,7 +170,9 @@ export default function Dashboard() {
 
         // 1. Fetch Problems from your backend (user_problems table)
         const problemsResponse = await fetch(
-          `http://localhost:5000/api/user_problems?user_id=${user.id}`
+          `${import.meta.env.VITE_BACKEND_URL}/api/user_problems?user_id=${
+            user.id
+          }`
         );
         if (!problemsResponse.ok) {
           const errorData = await problemsResponse.json();
@@ -207,7 +209,9 @@ export default function Dashboard() {
         if (leetcodeUsername) {
           try {
             const profileResponse = await axios.get(
-              `http://localhost:5000/api/leetcode-public-profile?username=${leetcodeUsername}`
+              `${
+                import.meta.env.VITE_BACKEND_URL
+              }/api/leetcode-public-profile?username=${leetcodeUsername}`
             );
             if (profileResponse.data) {
               leetCodeProfileData = profileResponse.data;
