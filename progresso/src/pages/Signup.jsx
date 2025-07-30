@@ -13,7 +13,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import supabase from "../supabaseClient"; // Make sure this path is correct
 
-export default function SignUp({ onSignUpSuccess }) {
+export default function Signup({ onSignUpSuccess }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

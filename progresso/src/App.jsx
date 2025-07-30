@@ -14,8 +14,8 @@ import Goals from "./pages/Goals";
 import Home from "./pages/Home";
 import Problems from "./pages/Problems";
 import Profile from "./pages/Profile";
-import SignIn from "./pages/SignIn";
-import SignUp from "./pages/SignUp";
+import SignIn from "./pages/Signin";
+import SignUp from "./pages/Signup";
 
 // Import AuthProvider and ProtectedRoute
 import { AuthProvider, useAuth } from "./AuthContext"; // Make sure path is correct
