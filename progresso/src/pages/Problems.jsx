@@ -3,130 +3,27 @@ import {
   FaCalendarAlt,
   FaCode,
   FaEdit,
+  FaExclamationTriangle,
   FaRegStar,
   FaSearch,
+  FaSpinner,
   FaStar,
   FaTimes,
 } from "react-icons/fa";
 
+import { useAuth } from "../AuthContext.jsx";
+import supabase from "../supabaseClient";
+
 export default function Problems() {
-  // Placeholder data for problems. In a real app, this would come from an API/DB.
-  const [allProblems, setAllProblems] = useState([
-    {
-      id: 1,
-      name: "Two Sum",
-      platform: "LeetCode",
-      difficulty: "Easy",
-      dateSolved: "2024-07-25",
-      url: "https://leetcode.com/problems/two-sum/",
-      notes:
-        "Basic array traversal, good for warm-up. Remember edge cases like empty array.",
-      isImportant: true,
-    },
-    {
-      id: 2,
-      name: "Reverse Linked List",
-      platform: "GeeksforGeeks",
-      difficulty: "Medium",
-      dateSolved: "2024-07-24",
-      url: "https://www.geeksforgeeks.org/reverse-a-linked-list/",
-      notes:
-        "Learned iterative and recursive approaches. Iterative is often preferred for performance.",
-      isImportant: false,
-    },
-    {
-      id: 3,
-      name: "Merge Sort",
-      platform: "HackerRank",
-      difficulty: "Hard",
-      dateSolved: "2024-07-23",
-      url: "https://www.hackerrank.com/challenges/merge-sort/problem",
-      notes:
-        "Classic divide and conquer algorithm. Pay attention to the merge step.",
-      isImportant: true,
-    },
-    {
-      id: 4,
-      name: "Binary Search",
-      platform: "LeetCode",
-      difficulty: "Easy",
-      dateSolved: "2024-07-22",
-      url: "https://leetcode.com/problems/binary-search/",
-      notes:
-        "Standard template for searching sorted arrays. Practice variations.",
-      isImportant: false,
-    },
-    {
-      id: 5,
-      name: "Quick Sort",
-      platform: "Codeforces",
-      difficulty: "Medium",
-      dateSolved: "2024-07-21",
-      url: "https://codeforces.com/problemset/problem/1/A",
-      notes:
-        "Efficient sorting, average case O(N log N). Watch out for pivot selection.",
-      isImportant: false,
-    },
-    {
-      id: 6,
-      name: "Longest Common Subsequence",
-      platform: "GeeksforGeeks",
-      difficulty: "Hard",
-      dateSolved: "2024-07-20",
-      url: "https://www.geeksforgeeks.org/longest-common-subsequence-dp-4/",
-      notes:
-        "Dynamic Programming problem. Understand the state transitions and base cases.",
-      isImportant: true,
-    },
-    {
-      id: 7,
-      name: "FizzBuzz",
-      platform: "HackerRank",
-      difficulty: "Easy",
-      dateSolved: "2024-07-19",
-      url: "https://www.hackerrank.com/challenges/fizzbuzz/problem",
-      notes:
-        "Good for basic loops and conditionals. Often used in initial coding screens.",
-      isImportant: false,
-    },
-    {
-      id: 8,
-      name: "Container With Most Water",
-      platform: "LeetCode",
-      difficulty: "Medium",
-      dateSolved: "2024-07-18",
-      url: "https://leetcode.com/problems/container-with-most-water/",
-      notes:
-        "Two-pointer approach is key to optimizing this problem. Visualize the pointers.",
-      isImportant: false,
-    },
-    {
-      id: 9,
-      name: "Dijkstra's Shortest Path",
-      platform: "Codeforces",
-      difficulty: "Hard",
-      dateSolved: "2024-07-17",
-      url: "https://codeforces.org/problemset/problem/20/C",
-      notes:
-        "Graph algorithm, requires understanding of priority queues and relaxation.",
-      isImportant: true,
-    },
-    {
-      id: 10,
-      name: "Array Reverse",
-      platform: "GeeksforGeeks",
-      difficulty: "Easy",
-      dateSolved: "2024-07-16",
-      url: "https://www.geeksforgeeks.org/write-a-program-to-reverse-an-array-or-string/",
-      notes:
-        "Basic array manipulation, recursive solution is elegant. Consider in-place solutions.",
-      isImportant: false,
-    },
-  ]);
+  const { user, loading: authLoading } = useAuth();
+
+  const [allProblems, setAllProblems] = useState([]);
+  const [loadingProblems, setLoadingProblems] = useState(true);
+  const [problemsError, setProblemsError] = useState(null);
 
   const [filteredProblems, setFilteredProblems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("platform"); // 'platform', 'difficulty', 'dateSolved'
+  const [sortBy, setSortBy] = useState("platform");
   const [showImportantOnly, setShowImportantOnly] = useState(false);
 
   const [showNotesModal, setShowNotesModal] = useState(false);
@@ -136,25 +33,71 @@ export default function Problems() {
     notes: "",
   });
 
-  // Apply filters and sorting whenever dependencies change
+  useEffect(() => {
+    const fetchProblems = async () => {
+      console.log(
+        "Fetching problems for user ID:",
+        user?.id,
+        "Auth loading:",
+        authLoading
+      );
+
+      if (authLoading || !user) {
+        setLoadingProblems(false);
+        setAllProblems([]); // Clear problems if user logs out or is not available
+        return;
+      }
+
+      setLoadingProblems(true);
+      setProblemsError(null);
+
+      try {
+        // This endpoint now triggers the sync and returns updated problems
+        const response = await fetch(
+          `http://localhost:5000/api/user_problems?user_id=${user.id}`
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || "Failed to fetch problems from backend."
+          );
+        }
+
+        const data = await response.json();
+        console.log("Problems fetched:", data); // Log the fetched data
+        setAllProblems(data);
+      } catch (err) {
+        console.error("Error fetching problems from backend:", err);
+        setProblemsError(
+          `Failed to load your problems: ${err.message}. Please try refreshing.`
+        );
+        setAllProblems([]);
+      } finally {
+        setLoadingProblems(false);
+      }
+    };
+
+    fetchProblems();
+  }, [user, authLoading]); // Dependencies correctly include user and authLoading
+
   useEffect(() => {
     let tempProblems = [...allProblems];
 
-    // Search filter
     if (searchTerm) {
       tempProblems = tempProblems.filter(
         (problem) =>
-          problem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          problem.notes.toLowerCase().includes(searchTerm.toLowerCase())
+          problem.problem_name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          problem.notes?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Important filter
     if (showImportantOnly) {
-      tempProblems = tempProblems.filter((problem) => problem.isImportant);
+      tempProblems = tempProblems.filter((problem) => problem.is_important);
     }
 
-    // Sorting
     tempProblems.sort((a, b) => {
       if (sortBy === "platform") {
         return a.platform.localeCompare(b.platform);
@@ -162,42 +105,90 @@ export default function Problems() {
         const difficultyOrder = { Easy: 1, Medium: 2, Hard: 3 };
         return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
       } else if (sortBy === "dateSolved") {
-        return new Date(b.dateSolved) - new Date(a.dateSolved); // Newest first
+        return new Date(b.date_solved) - new Date(a.date_solved);
       }
-      return 0; // Should not happen
+      return 0;
     });
 
     setFilteredProblems(tempProblems);
   }, [allProblems, searchTerm, sortBy, showImportantOnly]);
 
-  const toggleImportant = (id) => {
+  const toggleImportant = async (id, currentStatus) => {
     setAllProblems((prevProblems) =>
       prevProblems.map((problem) =>
         problem.id === id
-          ? { ...problem, isImportant: !problem.isImportant }
+          ? { ...problem, is_important: !problem.is_important }
           : problem
       )
     );
+    try {
+      const { error } = await supabase
+        .from("user_problems")
+        .update({ is_important: !currentStatus })
+        .eq("id", id)
+        .select();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    } catch (err) {
+      console.error("Error updating importance:", err);
+      setAllProblems((prevProblems) =>
+        prevProblems.map((problem) =>
+          problem.id === id
+            ? { ...problem, is_important: currentStatus }
+            : problem
+        )
+      );
+      setProblemsError({
+        type: "error",
+        text: `Failed to update importance: ${err.message}`,
+      });
+      setTimeout(() => setProblemsError(null), 3000);
+    }
   };
 
   const openNotesModal = (problem) => {
     setCurrentProblemNotes({
       id: problem.id,
-      name: problem.name,
+      name: problem.problem_name,
       notes: problem.notes,
     });
     setShowNotesModal(true);
   };
 
-  const saveNotes = () => {
-    setAllProblems((prevProblems) =>
-      prevProblems.map((problem) =>
-        problem.id === currentProblemNotes.id
-          ? { ...problem, notes: currentProblemNotes.notes }
-          : problem
-      )
-    );
-    setShowNotesModal(false);
+  const saveNotes = async () => {
+    setLoadingProblems(true);
+    try {
+      const { data, error } = await supabase
+        .from("user_problems")
+        .update({ notes: currentProblemNotes.notes })
+        .eq("id", currentProblemNotes.id)
+        .select();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+      setAllProblems((prevProblems) =>
+        prevProblems.map((problem) =>
+          problem.id === currentProblemNotes.id
+            ? { ...problem, notes: currentProblemNotes.notes }
+            : problem
+        )
+      );
+      setShowNotesModal(false);
+      setProblemsError({ type: "success", text: "Notes saved successfully!" });
+      setTimeout(() => setProblemsError(null), 3000);
+    } catch (err) {
+      console.error("Error saving notes:", err);
+      setProblemsError({
+        type: "error",
+        text: `Failed to save notes: ${err.message}`,
+      });
+      setTimeout(() => setProblemsError(null), 3000);
+    } finally {
+      setLoadingProblems(false);
+    }
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -214,7 +205,6 @@ export default function Problems() {
   };
 
   const getPlatformIcon = (platform) => {
-    // Using simple favicons for now. In a real app, ensure these URLs are stable or host them locally.
     switch (platform) {
       case "LeetCode":
         return (
@@ -231,7 +221,7 @@ export default function Problems() {
       case "HackerRank":
         return (
           <img
-            src="hr.png"
+            src="/hr.png"
             alt="HackerRank"
             className="w-5 h-5 mr-1 inline-block"
           />
@@ -299,85 +289,97 @@ export default function Problems() {
           </button>
         </div>
 
-        {/* Problems Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {" "}
-          {/* Added xl column */}
-          {filteredProblems.length === 0 ? (
-            <div className="lg:col-span-3 xl:col-span-4 text-center py-10 bg-white rounded-lg shadow-md">
-              {" "}
-              {/* Span full width */}
-              <p className="text-gray-500 text-xl">
-                No problems found matching your criteria.
-              </p>
-            </div>
-          ) : (
-            filteredProblems.map((problem) => (
-              <div
-                key={problem.id}
-                className="bg-white rounded-lg shadow-md p-6 flex flex-col justify-between transform transition duration-300 hover:scale-[1.01] hover:shadow-lg"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xl font-semibold text-gray-800 flex items-center">
-                      {getPlatformIcon(problem.platform)}
-                      <a
-                        href={problem.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-blue-600 transition-colors duration-200 truncate max-w-[calc(100%-40px)]"
-                      >
+        {/* Loading / Error State for Problems Grid */}
+        {loadingProblems || authLoading ? (
+          <div className="text-center py-10 bg-white rounded-lg shadow-md flex items-center justify-center gap-3">
+            <FaSpinner className="animate-spin text-blue-600 text-2xl" />
+            <p className="text-blue-600 text-xl">Loading problems...</p>
+          </div>
+        ) : problemsError ? (
+          <div className="text-center py-10 bg-red-50 rounded-lg shadow-md border border-red-200 text-red-700">
+            <FaExclamationTriangle className="mr-2 inline-block" />
+            <p className="text-xl">{problemsError.text || problemsError}</p>
+          </div>
+        ) : (
+          /* Problems Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredProblems.length === 0 ? (
+              <div className="lg:col-span-3 xl:col-span-4 text-center py-10 bg-white rounded-lg shadow-md">
+                <p className="text-gray-500 text-xl">
+                  No problems found matching your criteria.
+                </p>
+              </div>
+            ) : (
+              filteredProblems.map((problem) => (
+                <div
+                  key={problem.id}
+                  className="bg-white rounded-lg shadow-md p-6 flex flex-col justify-between transform transition duration-300 hover:scale-[1.01] hover:shadow-lg"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xl font-semibold text-gray-800 flex items-center min-w-0">
                         {" "}
-                        {/* Added truncate */}
-                        {problem.name}
-                      </a>
-                    </h3>
+                        {/* Added min-w-0 */}
+                        {getPlatformIcon(problem.platform)}
+                        {/* problem_name from DB */}
+                        <a
+                          href={problem.problem_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-grow hover:text-blue-600 transition-colors duration-200 truncate" // Added truncate
+                        >
+                          {problem.problem_name}
+                        </a>
+                      </h3>
+                      <button
+                        onClick={() =>
+                          toggleImportant(problem.id, problem.is_important)
+                        }
+                        className="text-gray-400 hover:text-yellow-500 transition-colors duration-200 ml-2 flex-shrink-0"
+                      >
+                        {problem.is_important ? (
+                          <FaStar className="text-yellow-500 text-2xl" />
+                        ) : (
+                          <FaRegStar className="text-2xl" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center space-x-4 text-sm text-gray-600 mb-4">
+                      <span className="flex items-center">
+                        Platform: {problem.platform}
+                      </span>
+                      <span
+                        className={`font-semibold ${getDifficultyColor(
+                          problem.difficulty
+                        )}`}
+                      >
+                        Difficulty: {problem.difficulty}
+                      </span>
+                      <span className="flex items-center">
+                        <FaCalendarAlt className="mr-1" />
+                        {new Date(problem.date_solved).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <p className="text-gray-700 text-base mb-4 line-clamp-3">
+                      {problem.notes || "No notes added yet."}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end">
                     <button
-                      onClick={() => toggleImportant(problem.id)}
-                      className="text-gray-400 hover:text-yellow-500 transition-colors duration-200"
+                      onClick={() => openNotesModal(problem)}
+                      className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold hover:bg-gray-300 transition duration-200 flex items-center gap-1"
                     >
-                      {problem.isImportant ? (
-                        <FaStar className="text-yellow-500 text-2xl" />
-                      ) : (
-                        <FaRegStar className="text-2xl" />
-                      )}
+                      <FaEdit /> Add/Edit Notes
                     </button>
                   </div>
-
-                  <div className="flex flex-wrap items-center space-x-4 text-sm text-gray-600 mb-4">
-                    <span className="flex items-center">
-                      Platform: {problem.platform}
-                    </span>
-                    <span
-                      className={`font-semibold ${getDifficultyColor(
-                        problem.difficulty
-                      )}`}
-                    >
-                      Difficulty: {problem.difficulty}
-                    </span>
-                    <span className="flex items-center">
-                      <FaCalendarAlt className="mr-1" />
-                      {problem.dateSolved}
-                    </span>
-                  </div>
-
-                  <p className="text-gray-700 text-base mb-4 line-clamp-3">
-                    {problem.notes || "No notes added yet."}
-                  </p>
                 </div>
-
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => openNotesModal(problem)}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold hover:bg-gray-300 transition duration-200 flex items-center gap-1"
-                  >
-                    <FaEdit /> Add/Edit Notes
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Notes Modal */}
