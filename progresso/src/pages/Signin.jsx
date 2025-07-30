@@ -5,6 +5,7 @@ import {
   FaLock,
   FaSpinner,
 } from "react-icons/fa"; // Import icons
+import { useNavigate } from "react-router-dom";
 
 import supabase from "../supabaseClient"; // Make sure this path is correct
 
@@ -13,6 +14,7 @@ function Signin({ onSignInSuccess, onSignUpClick }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const handleSignIn = async (e) => {
     e.preventDefault();
@@ -34,6 +36,7 @@ function Signin({ onSignInSuccess, onSignUpClick }) {
     } else if (data.user) {
       // Sign-in successful
       console.log("Supabase Sign-in successful! User:", data.user);
+      navigate("/dashboard");
       // Pass username (from user_metadata if stored, or email) to App.jsx
       // Assuming 'name' is stored in user_metadata during SignUp
       onSignInSuccess(
