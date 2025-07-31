@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: progresso-backend
+  namespace: progresso
+  labels:
+    app: progresso-backend
+spec:
+  replicas: 2 # You can adjust the number of replicas for high availability
+  selector:
+    matchLabels:
+      app: progresso-backend
+  template:
+    metadata:
+      labels:
+        app: progresso-backend
+    spec:
+      containers:
+        - name: progresso-backend
+          image: anaghabharadwaj/progresso-backend:latest
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: progresso-backend-config
+            - secretRef:
+                name: progresso-backend-secret
