@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: progresso-frontend
+  namespace: progresso
+  labels:
+    app: progresso-frontend
+spec:
+  replicas: 1 # you can alwyas change it
+  selector:
+    matchLabels:
+      app: progresso-frontend
+  template:
+    metadata:
+      labels:
+        app: progresso-frontend
+    spec:
+      containers:
+        - name: progresso-frontend
+          image: anaghabharadwaj/progresso-frontend:latest
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: progresso-frontend-config
